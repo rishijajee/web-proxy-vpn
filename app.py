@@ -49,10 +49,28 @@ def rewrite_links(html_content, base_url):
         html_content
     )
 
+    # Rewrite action attributes in forms
+    html_content = re.sub(
+        r'action=["\']([^"\']+)["\']',
+        lambda m: f'action="{proxy_url(make_absolute_url(m.group(1), base_url))}"',
+        html_content
+    )
+
     # Rewrite CSS url() references
     html_content = re.sub(
         r'url\(["\']?([^"\')\s]+)["\']?\)',
         lambda m: f'url({proxy_url(make_absolute_url(m.group(1), base_url))})',
+        html_content
+    )
+
+    # Rewrite JavaScript location redirects
+    parsed = urlparse(base_url)
+    base_domain = f"{parsed.scheme}://{parsed.netloc}"
+
+    # Rewrite window.location and location.href
+    html_content = re.sub(
+        r'(window\.location|location\.href)\s*=\s*["\']([^"\']+)["\']',
+        lambda m: f'{m.group(1)}="/proxy?url={make_absolute_url(m.group(2), base_url)}"',
         html_content
     )
 
@@ -83,7 +101,7 @@ def browse():
     return redirect('/')
 
 
-@app.route('/proxy')
+@app.route('/proxy', methods=['GET', 'POST'])
 def proxy():
     """Proxy the requested URL"""
     target_url = request.args.get('url', '')
@@ -92,25 +110,44 @@ def proxy():
         return redirect('/')
 
     try:
-        # Make request to target URL
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Accept-Encoding': 'gzip, deflate',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1'
-        }
+        # Forward headers from client
+        headers = {}
+        for key, value in request.headers:
+            if key.lower() not in ['host', 'connection', 'content-length', 'content-encoding']:
+                headers[key] = value
 
-        response = requests.get(
-            target_url,
-            headers=headers,
-            timeout=30,
-            allow_redirects=True,
-            verify=False  # Ignore SSL verification
-        )
+        # Ensure we have a proper User-Agent
+        if 'User-Agent' not in headers:
+            headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+
+        # Make request to target URL (handle both GET and POST)
+        if request.method == 'POST':
+            response = requests.post(
+                target_url,
+                data=request.get_data(),
+                headers=headers,
+                cookies=request.cookies,
+                timeout=30,
+                allow_redirects=True,
+                verify=False
+            )
+        else:
+            response = requests.get(
+                target_url,
+                headers=headers,
+                cookies=request.cookies,
+                timeout=30,
+                allow_redirects=True,
+                verify=False
+            )
 
         content_type = response.headers.get('Content-Type', '')
+
+        # Prepare response headers
+        response_headers = {}
+        for key, value in response.headers.items():
+            if key.lower() not in ['content-encoding', 'content-length', 'transfer-encoding', 'connection']:
+                response_headers[key] = value
 
         # If it's HTML, rewrite links to go through proxy
         if 'text/html' in content_type:
@@ -132,17 +169,30 @@ def proxy():
             '''
             content = content.replace('<body', banner + '<body', 1)
 
-            return Response(content, headers={
-                'Content-Type': 'text/html; charset=utf-8'
-            })
+            response_headers['Content-Type'] = 'text/html; charset=utf-8'
+
+            # Create response with cookies
+            flask_response = Response(content, headers=response_headers)
+
+            # Forward cookies from the proxied site
+            for cookie in response.cookies:
+                flask_response.set_cookie(
+                    cookie.name,
+                    cookie.value,
+                    max_age=cookie.expires,
+                    path=cookie.path or '/',
+                    domain=None,  # Don't set domain to allow cookie on our proxy
+                    secure=False,
+                    httponly=cookie.has_nonstandard_attr('HttpOnly')
+                )
+
+            return flask_response
         else:
             # For non-HTML content (images, CSS, JS, etc), pass through as-is
+            response_headers['Cache-Control'] = 'public, max-age=3600'
             return Response(
                 response.content,
-                headers={
-                    'Content-Type': content_type,
-                    'Cache-Control': 'public, max-age=3600'
-                }
+                headers=response_headers
             )
 
     except requests.exceptions.RequestException as e:
