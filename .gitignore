@@ -24,3 +24,19 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Google Docs Proxy VPN - Sensitive Files
+.config/                    # Encrypted credentials directory
+client_secrets.json         # Google OAuth credentials
+credentials.json            # Alternative credential file name
+token.json                  # OAuth tokens
+*.enc                       # Encrypted files
+secret.key                  # Encryption key
+
+# Upload/Download directories
+uploads/
+downloads/
+
+# Test files
+sample_upload.txt
+TEST_FILE.txt

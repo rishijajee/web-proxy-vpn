@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Google Docs Proxy</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .back-link {
+            display: inline-block;
+            color: white;
+            text-decoration: none;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .card h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group small {
+            display: block;
+            margin-top: 5px;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background 0.2s;
+        }
+
+        .btn:hover {
+            background: #5568d3;
+        }
+
+        .btn.btn-danger {
+            background: #f44336;
+        }
+
+        .btn.btn-danger:hover {
+            background: #da190b;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            padding: 15px;
+            border-left: 4px solid #2196f3;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+
+        .info-box h3 {
+            margin-bottom: 10px;
+            color: #1976d2;
+        }
+
+        .info-box p {
+            color: #555;
+            margin: 5px 0;
+        }
+
+        .success-message, .error-message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .success-message {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #4caf50;
+        }
+
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #f44336;
+        }
+
+        .current-config {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .current-config h3 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .config-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .config-item:last-child {
+            border-bottom: none;
+        }
+
+        .config-label {
+            font-weight: 600;
+            color: #666;
+        }
+
+        .config-value {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-link">← Back to Dashboard</a>
+
+        <div class="header">
+            <h1>⚙️ Settings</h1>
+        </div>
+
+        <div id="success-message" class="success-message"></div>
+        <div id="error-message" class="error-message"></div>
+
+        <!-- Proxy Configuration -->
+        <div class="card">
+            <h2>🔧 Proxy Configuration</h2>
+
+            {% if proxy_config %}
+            <div class="current-config">
+                <h3>Current Configuration</h3>
+                <div class="config-item">
+                    <span class="config-label">Type:</span>
+                    <span class="config-value">{{ proxy_config.type|upper }}</span>
+                </div>
+                <div class="config-item">
+                    <span class="config-label">Host:</span>
+                    <span class="config-value">{{ proxy_config.host }}</span>
+                </div>
+                <div class="config-item">
+                    <span class="config-label">Port:</span>
+                    <span class="config-value">{{ proxy_config.port }}</span>
+                </div>
+                <div class="config-item">
+                    <span class="config-label">Authentication:</span>
+                    <span class="config-value">
+                        {% if proxy_config.username %}Enabled{% else %}Disabled{% endif %}
+                    </span>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="info-box">
+                <h3>📝 Proxy Information</h3>
+                <p><strong>SOCKS5:</strong> Most versatile, supports any protocol</p>
+                <p><strong>HTTP/HTTPS:</strong> Web traffic only, simpler setup</p>
+                <p>Leave username/password empty if your proxy doesn't require authentication.</p>
+            </div>
+
+            <form id="proxy-form">
+                <div class="form-group">
+                    <label for="proxy-type">Proxy Type</label>
+                    <select id="proxy-type" name="type">
+                        <option value="socks5" {% if proxy_config and proxy_config.type == 'socks5' %}selected{% endif %}>SOCKS5</option>
+                        <option value="http" {% if proxy_config and proxy_config.type == 'http' %}selected{% endif %}>HTTP</option>
+                        <option value="https" {% if proxy_config and proxy_config.type == 'https' %}selected{% endif %}>HTTPS</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="proxy-host">Proxy Host</label>
+                    <input type="text" id="proxy-host" name="host" placeholder="proxy.example.com"
+                           value="{% if proxy_config %}{{ proxy_config.host }}{% endif %}" required>
+                    <small>Hostname or IP address of your proxy server</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="proxy-port">Proxy Port</label>
+                    <input type="number" id="proxy-port" name="port" placeholder="1080"
+                           value="{% if proxy_config %}{{ proxy_config.port }}{% endif %}" required>
+                    <small>Common ports: SOCKS5 (1080), HTTP (8080), HTTPS (8443)</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="proxy-username">Username (Optional)</label>
+                    <input type="text" id="proxy-username" name="username" placeholder="username"
+                           value="{% if proxy_config %}{{ proxy_config.username or '' }}{% endif %}">
+                </div>
+
+                <div class="form-group">
+                    <label for="proxy-password">Password (Optional)</label>
+                    <input type="password" id="proxy-password" name="password" placeholder="password">
+                    <small>Leave empty to keep existing password</small>
+                </div>
+
+                <div class="btn-group">
+                    <button type="submit" class="btn">Save Configuration</button>
+                    {% if proxy_config %}
+                    <button type="button" class="btn btn-danger" onclick="deleteProxy()">Delete Proxy</button>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+
+        <!-- Google OAuth Configuration -->
+        <div class="card">
+            <h2>🔐 Google OAuth Setup</h2>
+
+            <div class="info-box">
+                <h3>📝 Setup Instructions</h3>
+                <p>1. Go to <a href="https://console.cloud.google.com" target="_blank">Google Cloud Console</a></p>
+                <p>2. Create a new project or select an existing one</p>
+                <p>3. Enable Google Drive API and Google Docs API</p>
+                <p>4. Create OAuth 2.0 credentials (Web application)</p>
+                <p>5. Add <code>http://localhost:5000/oauth2callback</code> as authorized redirect URI</p>
+                <p>6. Download the client secrets JSON file</p>
+                <p>7. Save it as <code>client_secrets.json</code> in the app directory</p>
+            </div>
+
+            <div class="form-group">
+                <label>Client Secrets File Status</label>
+                <div style="padding: 10px; background: #f5f5f5; border-radius: 4px;">
+                    <span id="client-secrets-status">Checking...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check if client_secrets.json exists
+        fetch('/google-login')
+            .then(response => {
+                const status = document.getElementById('client-secrets-status');
+                if (response.redirected && response.url.includes('accounts.google.com')) {
+                    status.textContent = '✓ client_secrets.json found and valid';
+                    status.style.color = '#4caf50';
+                } else {
+                    status.textContent = '✗ client_secrets.json not found or invalid';
+                    status.style.color = '#f44336';
+                }
+            })
+            .catch(() => {
+                document.getElementById('client-secrets-status').textContent = '✗ Not configured';
+                document.getElementById('client-secrets-status').style.color = '#f44336';
+            });
+
+        // Handle proxy form submission
+        document.getElementById('proxy-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData(e.target);
+            const data = {
+                type: formData.get('type'),
+                host: formData.get('host'),
+                port: formData.get('port'),
+                username: formData.get('username') || null,
+                password: formData.get('password') || null
+            };
+
+            try {
+                const response = await fetch('/api/proxy/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage('success', result.message);
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showMessage('error', result.error || 'Failed to save configuration');
+                }
+            } catch (error) {
+                showMessage('error', 'Network error: ' + error.message);
+            }
+        });
+
+        async function deleteProxy() {
+            if (!confirm('Are you sure you want to delete the proxy configuration?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/proxy/delete', {
+                    method: 'POST'
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage('success', result.message);
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showMessage('error', result.error || 'Failed to delete configuration');
+                }
+            } catch (error) {
+                showMessage('error', 'Network error: ' + error.message);
+            }
+        }
+
+        function showMessage(type, message) {
+            const successEl = document.getElementById('success-message');
+            const errorEl = document.getElementById('error-message');
+
+            successEl.style.display = 'none';
+            errorEl.style.display = 'none';
+
+            if (type === 'success') {
+                successEl.textContent = message;
+                successEl.style.display = 'block';
+            } else {
+                errorEl.textContent = message;
+                errorEl.style.display = 'block';
+            }
+
+            window.scrollTo(0, 0);
+        }
+    </script>
+</body>
+</html>

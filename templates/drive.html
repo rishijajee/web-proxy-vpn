@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Drive Browser</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .back-link {
+            display: inline-block;
+            color: white;
+            text-decoration: none;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .header {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .search-bar {
+            display: flex;
+            gap: 10px;
+        }
+
+        .search-bar input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+
+        .search-bar input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 1em;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            background: #5568d3;
+        }
+
+        .files-grid {
+            display: grid;
+            gap: 15px;
+        }
+
+        .file-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .file-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+        }
+
+        .file-icon {
+            font-size: 2.5em;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .file-info {
+            flex: 1;
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+            font-size: 1.1em;
+        }
+
+        .file-meta {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .file-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            padding: 8px 16px;
+            background: #f5f5f5;
+            color: #667eea;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+
+        .action-btn:hover {
+            background: #e0e0e0;
+        }
+
+        .action-btn.primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .action-btn.primary:hover {
+            background: #5568d3;
+        }
+
+        .empty-state {
+            background: white;
+            border-radius: 12px;
+            padding: 60px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .empty-state-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+
+        .empty-state h2 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .empty-state p {
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            background: white;
+            min-width: 160px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            border-radius: 8px;
+            z-index: 1;
+            overflow: hidden;
+        }
+
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+
+        .dropdown-content a {
+            color: #333;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+        }
+
+        .dropdown-content a:hover {
+            background: #f5f5f5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-link">← Back to Dashboard</a>
+
+        <div class="header">
+            <h1>📁 Google Drive Browser</h1>
+            <form action="/drive" method="GET" class="search-bar">
+                <input type="text" name="q" placeholder="Search files..." value="{{ query or '' }}">
+                <button type="submit" class="btn">Search</button>
+                <a href="/upload" class="btn">Upload File</a>
+            </form>
+        </div>
+
+        <div class="files-grid">
+            {% if files %}
+                {% for file in files %}
+                <div class="file-card">
+                    <div class="file-icon">
+                        {% if 'folder' in file.mimeType %}
+                            📁
+                        {% elif 'document' in file.mimeType %}
+                            📄
+                        {% elif 'spreadsheet' in file.mimeType %}
+                            📊
+                        {% elif 'presentation' in file.mimeType %}
+                            📽️
+                        {% elif 'image' in file.mimeType %}
+                            🖼️
+                        {% elif 'video' in file.mimeType %}
+                            🎥
+                        {% elif 'audio' in file.mimeType %}
+                            🎵
+                        {% else %}
+                            📎
+                        {% endif %}
+                    </div>
+
+                    <div class="file-info">
+                        <div class="file-name">{{ file.name }}</div>
+                        <div class="file-meta">
+                            Modified: {{ file.modifiedTime[:10] }}
+                            {% if file.size %}
+                                | Size: {{ (file.size|int / 1024)|round|int }} KB
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="file-actions">
+                        {% if file.webViewLink %}
+                        <a href="/browse?url={{ file.webViewLink|urlencode }}" class="action-btn primary">
+                            Open
+                        </a>
+                        {% endif %}
+
+                        {% if 'google-apps' in file.mimeType %}
+                        <div class="dropdown">
+                            <button class="action-btn">Download ▼</button>
+                            <div class="dropdown-content">
+                                {% if 'document' in file.mimeType %}
+                                <a href="/download/{{ file.id }}?format=docx">Word (.docx)</a>
+                                <a href="/download/{{ file.id }}?format=pdf">PDF</a>
+                                <a href="/download/{{ file.id }}?format=txt">Text</a>
+                                {% elif 'spreadsheet' in file.mimeType %}
+                                <a href="/download/{{ file.id }}?format=xlsx">Excel (.xlsx)</a>
+                                <a href="/download/{{ file.id }}?format=pdf">PDF</a>
+                                <a href="/download/{{ file.id }}?format=csv">CSV</a>
+                                {% elif 'presentation' in file.mimeType %}
+                                <a href="/download/{{ file.id }}?format=pptx">PowerPoint (.pptx)</a>
+                                <a href="/download/{{ file.id }}?format=pdf">PDF</a>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% else %}
+                        <a href="/download/{{ file.id }}" class="action-btn">Download</a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon">📭</div>
+                    <h2>No Files Found</h2>
+                    <p>{% if query %}No files match your search.{% else %}Your Google Drive is empty.{% endif %}</p>
+                    <a href="/upload" class="btn">Upload Your First File</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>
