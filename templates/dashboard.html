@@ -333,10 +333,17 @@
 
             <p style="margin-bottom: 10px; color: #666;">Quick Links:</p>
             <div class="quick-links">
-                <a href="/browse?url=https://docs.google.com" class="quick-link">Google Docs</a>
-                <a href="/browse?url=https://drive.google.com" class="quick-link">Google Drive</a>
-                <a href="/browse?url=https://mail.google.com" class="quick-link">Gmail</a>
+                {% if is_google_auth %}
+                <a href="/drive" class="quick-link">Google Drive</a>
                 <a href="/browse?url=https://www.youtube.com" class="quick-link">YouTube</a>
+                <a href="/browse?url=https://www.reddit.com" class="quick-link">Reddit</a>
+                <a href="/browse?url=https://www.wikipedia.org" class="quick-link">Wikipedia</a>
+                {% else %}
+                <a href="/google-login" class="quick-link">Login for Google Services</a>
+                <a href="/browse?url=https://www.youtube.com" class="quick-link">YouTube</a>
+                <a href="/browse?url=https://www.reddit.com" class="quick-link">Reddit</a>
+                <a href="/browse?url=https://www.wikipedia.org" class="quick-link">Wikipedia</a>
+                {% endif %}
             </div>
         </div>
     </div>

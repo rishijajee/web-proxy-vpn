@@ -196,7 +196,14 @@ def oauth2callback():
     redirect_uri = url_for('oauth2callback', _external=True)
 
     if google_manager.handle_oauth_callback(authorization_response, redirect_uri=redirect_uri):
-        return redirect('/')
+        # Check if there's a return URL in session
+        return_url = session.pop('return_to_url', None)
+        if return_url and any(domain in return_url.lower() for domain in ['docs.google.com', 'drive.google.com', 'mail.google.com', 'gmail.com']):
+            # Redirect to Drive browser for Google services
+            return redirect('/drive')
+        else:
+            # Redirect to dashboard
+            return redirect('/')
     else:
         return render_template('error.html',
                              error='OAuth authentication failed',
@@ -208,6 +215,116 @@ def google_logout():
     """Logout from Google"""
     token_manager.delete_tokens()
     return redirect('/')
+
+
+@app.route('/google-direct')
+def google_direct():
+    """Direct access to Google services with authenticated browser"""
+    if not google_manager.is_authenticated():
+        return redirect('/google-login')
+
+    # Get the target URL from session or default to Drive
+    target_url = session.pop('return_to_url', 'https://drive.google.com')
+
+    if 'session_id' not in session:
+        session['session_id'] = secrets.token_hex(16)
+
+    session_id = session['session_id']
+    cleanup_old_sessions()
+
+    # Use proxy if configured
+    use_proxy = proxy_manager.get_proxy() is not None
+
+    try:
+        driver = get_browser_session(session_id, use_proxy=use_proxy)
+
+        if not driver:
+            return render_template('error.html',
+                                 error='Failed to initialize browser.',
+                                 url=target_url)
+
+        # Navigate to Google OAuth to get cookies
+        # This ensures the browser session is authenticated
+        driver.get(target_url)
+
+        try:
+            from selenium.webdriver.support.ui import WebDriverWait
+            WebDriverWait(driver, 15).until(
+                lambda d: d.execute_script('return document.readyState') == 'complete'
+            )
+        except:
+            pass
+
+        current_url = driver.current_url
+        screenshot = driver.get_screenshot_as_png()
+        screenshot_b64 = base64.b64encode(screenshot).decode('utf-8')
+
+        html_content = f'''
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Google Service - {current_url}</title>
+            <style>
+                body {{ margin: 0; padding: 0; font-family: Arial, sans-serif; }}
+                .proxy-banner {{
+                    position: fixed; top: 0; left: 0; right: 0;
+                    background: #4285f4; color: white; padding: 10px 20px;
+                    z-index: 9999; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+                }}
+                .proxy-banner-content {{
+                    display: flex; align-items: center; justify-content: space-between;
+                    max-width: 1200px; margin: 0 auto;
+                }}
+                .proxy-info {{ display: flex; align-items: center; gap: 10px; font-size: 14px; }}
+                .proxy-controls {{ display: flex; gap: 10px; }}
+                .proxy-btn {{
+                    background: white; color: #4285f4; padding: 5px 15px;
+                    border-radius: 4px; text-decoration: none; font-size: 14px;
+                    border: none; cursor: pointer;
+                }}
+                .proxy-btn:hover {{ background: #f0f0f0; }}
+                .content-area {{ margin-top: 50px; padding: 20px; }}
+                .screenshot {{
+                    max-width: 100%; border: 1px solid #ddd;
+                    border-radius: 4px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                }}
+                .info {{
+                    background: #e8f4fd; padding: 15px; margin: 10px 0;
+                    border-left: 4px solid #4285f4; border-radius: 4px;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="proxy-banner">
+                <div class="proxy-banner-content">
+                    <div class="proxy-info">
+                        <span style="font-weight: bold;">🔐 Google Service (Authenticated)</span>
+                        <span style="opacity: 0.9;">Viewing: {current_url}</span>
+                    </div>
+                    <div class="proxy-controls">
+                        <a href="/interact?url={current_url}" class="proxy-btn">Interact</a>
+                        <a href="/drive" class="proxy-btn">Browse Drive</a>
+                        <a href="/" class="proxy-btn">Dashboard</a>
+                    </div>
+                </div>
+            </div>
+            <div class="content-area">
+                <div class="info">
+                    <strong>✓ Authenticated Access:</strong> You're viewing this Google service with your authenticated account.
+                    Use "Interact" mode to click, type, and navigate. For file operations, use the Drive Browser.
+                </div>
+                <img src="data:image/png;base64,{screenshot_b64}" class="screenshot" alt="Page Screenshot">
+            </div>
+        </body>
+        </html>
+        '''
+
+        return Response(html_content, headers={'Content-Type': 'text/html; charset=utf-8'})
+
+    except Exception as e:
+        return render_template('error.html', error=str(e), url=target_url)
 
 
 @app.route('/drive')
@@ -296,6 +413,21 @@ def browse():
         url = 'https://' + url
 
     if url:
+        # Check if it's a Google service URL
+        google_domains = ['docs.google.com', 'drive.google.com', 'mail.google.com', 'gmail.com']
+        is_google_url = any(domain in url.lower() for domain in google_domains)
+
+        if is_google_url:
+            # For Google URLs, check authentication first
+            if not google_manager.is_authenticated():
+                # Store the intended URL in session
+                session['return_to_url'] = url
+                return render_template('google_auth_required.html', target_url=url)
+            else:
+                # Redirect to Drive browser for Google services
+                return redirect('/drive')
+
+        # For non-Google URLs, use the proxy
         return redirect(f'/proxy?url={url}')
 
     return redirect('/')
